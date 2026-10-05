@@ -7,18 +7,43 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node dependencies & builds
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+**/.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Python environments & bytecode
+.venv/
+ml/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Raw Datasets & archives
+Dataset/
+*.zip
+*.tar.gz
+
+# Large generated landmark CSVs & temporary test subsets
+ml/output/train_landmarks.csv
+ml/output/validation_landmarks.csv
+ml/output/test_landmarks.csv
+ml/output/test_subset_*.csv
+ml/output/test_extraction_report.json
+
+# Temporary model training checkpoints & external task assets
+ml/models/checkpoints/
+ml/models/hand_landmarker.task

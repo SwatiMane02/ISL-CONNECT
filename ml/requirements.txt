@@ -1,0 +1,10 @@
+# Machine Learning & Landmark Extraction Dependencies (Tested & Verified on Python 3.12, macOS Apple Silicon)
+numpy==1.26.4
+pandas==3.0.6
+scikit-learn==1.9.1
+opencv-python==4.11.0.86
+opencv-contrib-python==4.11.0.86
+mediapipe==0.10.21
+tensorflow==2.18.0
+matplotlib==3.11.2
+seaborn==0.13.2
