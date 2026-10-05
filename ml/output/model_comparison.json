@@ -1,0 +1,19 @@
+{
+  "baseline": {
+    "architecture": "63 -> 128 -> 64 -> 26",
+    "val_accuracy": 0.872,
+    "test_accuracy": 0.9050314426422119,
+    "test_loss": 0.5027850866317749,
+    "macro_f1": 0.8992220128969012
+  },
+  "improved": {
+    "architecture": "63 -> 256 -> 128 -> 26 (Dropout 0.30, L2 1e-4, lr 0.0005)",
+    "val_accuracy": 0.892,
+    "test_accuracy": 0.9213836193084717,
+    "test_loss": 0.5421723127365112,
+    "macro_precision": 0.9349590490298122,
+    "macro_recall": 0.9180200269983065,
+    "macro_f1": 0.9188192177913882,
+    "weighted_f1": 0.9200474505923275
+  }
+}

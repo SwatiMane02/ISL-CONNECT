@@ -1,0 +1,12 @@
+experiment,architecture,dropout,l2_reg,learning_rate,batch_size,best_epoch,total_epochs,train_loss,train_accuracy,val_loss,val_accuracy,training_time_s,checkpoint_path,notes
+Exp_G_Wider_lr5e-4,63->256->128->26,0.3,0.0001,0.0005,32,13,19,0.0454,99.65,0.7508,89.2,5.56,ml/models/checkpoints/Exp_G_Wider_lr5e-4.keras,Wider MLP with lower lr (5e-4)
+Exp_D_Deeper,63->128->64->32->26,0.25,0.0001,0.001,32,30,30,0.0487,99.48,0.791,88.9,7.79,ml/models/checkpoints/Exp_D_Deeper.keras,Deeper MLP (128-64-32)
+Exp_K_Residual_Augmented,63->128->ResBlock(128)->64->26,0.3,0.0001,0.0005,32,22,26,0.0652,99.32,0.7586,88.69,16.24,ml/models/checkpoints/Exp_K_Residual_Augmented.keras,Residual MLP + 2x Augmented Landmark Training Data
+Exp_A_Baseline,63->128->64->26,0.25,0.0,0.001,32,10,16,0.0356,99.21,0.7226,88.56,3.78,ml/models/checkpoints/Exp_A_Baseline.keras,Current Baseline
+Exp_C_Wider,63->256->128->26,0.3,0.0001,0.001,32,7,15,0.075,98.99,0.7954,88.48,4.6,ml/models/checkpoints/Exp_C_Wider.keras,Wider MLP (256-128)
+Exp_I_Wider_ClassWeights,63->256->128->26,0.3,0.0001,0.0005,32,7,17,0.0747,98.84,0.7754,88.43,5.04,ml/models/checkpoints/Exp_I_Wider_ClassWeights.keras,Wider MLP + Balanced Class Weights
+Exp_E_Compact,63->128->32->26,0.2,0.0,0.001,32,16,18,0.0242,99.53,0.6383,88.35,4.15,ml/models/checkpoints/Exp_E_Compact.keras,Smaller Compact MLP (128-32)
+Exp_H_Wider_bs64,63->256->128->26,0.3,0.0001,0.001,64,15,17,0.0421,99.72,0.8819,88.22,3.47,ml/models/checkpoints/Exp_H_Wider_bs64.keras,Wider MLP with batch_size=64
+Exp_B_Regularized,63->128->64->26 (Reg),0.35,0.0001,0.001,32,10,17,0.0805,98.37,0.7052,87.79,4.07,ml/models/checkpoints/Exp_B_Regularized.keras,Higher Dropout (0.35) + L2 Regularization (1e-4)
+Exp_J_Wider_Augmented,63->256->128->26,0.3,0.0001,0.0005,32,13,15,0.0398,99.6,0.9877,87.75,8.04,ml/models/checkpoints/Exp_J_Wider_Augmented.keras,Wider MLP + 2x Augmented Landmark Training Data
+Exp_F_Residual,63->128->ResBlock(128)->64->26,0.3,0.0001,0.001,32,19,20,0.0877,98.87,0.8677,87.2,7.16,ml/models/checkpoints/Exp_F_Residual.keras,Residual Skip-Connection MLP
