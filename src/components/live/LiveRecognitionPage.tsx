@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Sparkles, Info, Play, Square, Cpu, Layers, Volume2, VolumeX, RotateCcw, CornerDownLeft, AlertCircle } from 'lucide-react';
+import { Camera, Sparkles, Info, Play, Square, Cpu, Layers, Volume2, VolumeX, RotateCcw, CornerDownLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useISLModelInference } from '../../hooks/useISLModelInference';
 import { ISL_ALPHABET } from '../../data/islAlphabet';
 
@@ -14,6 +14,9 @@ export const LiveRecognitionPage: React.FC = () => {
     confidence,
     stabilityStatus,
     lastCycleId,
+    isModelLoading,
+    modelError,
+    isHandDetected,
     startCamera,
     stopCamera,
     selectDemoLetter
@@ -21,6 +24,7 @@ export const LiveRecognitionPage: React.FC = () => {
 
   const [messageBuffer, setMessageBuffer] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [autoSpeakLetter, setAutoSpeakLetter] = useState<boolean>(true);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const processedCycleRef = useRef<number>(0);
 
@@ -29,8 +33,20 @@ export const LiveRecognitionPage: React.FC = () => {
     if (stabilityStatus === 'Stable' && lastCycleId > 0 && lastCycleId !== processedCycleRef.current) {
       processedCycleRef.current = lastCycleId;
       setMessageBuffer(prev => prev + currentLetter);
+
+      // Trigger instant speech pronunciation for the newly committed gesture
+      if (autoSpeakLetter && 'speechSynthesis' in window && !isSpeaking) {
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(currentLetter);
+          utterance.rate = 1.0;
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn('Auto TTS speech notice:', e);
+        }
+      }
     }
-  }, [stabilityStatus, lastCycleId, currentLetter]);
+  }, [stabilityStatus, lastCycleId, currentLetter, autoSpeakLetter, isSpeaking]);
 
   // Buffer Action Handlers
   const handleAddSpace = () => {
@@ -45,7 +61,7 @@ export const LiveRecognitionPage: React.FC = () => {
     setMessageBuffer('');
   };
 
-  // Robust Text-to-Speech handler
+  // Robust Text-to-Speech handler for the complete accumulated buffer
   const handleSpeak = () => {
     // 1. Guard against empty text or active speech playback
     if (!messageBuffer.trim() || isSpeaking) return;
@@ -130,18 +146,19 @@ export const LiveRecognitionPage: React.FC = () => {
                   : 'text-[#475569] hover:text-[#0F172A]'
               }`}
             >
-              Demo Mode (Active)
+              Demo Mode {recognitionMode === 'demo' ? '(Active)' : ''}
             </button>
 
             <button
-              disabled
-              className="flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed flex items-center gap-1.5"
-              title="CNN Model Inference coming soon"
+              onClick={() => setRecognitionMode('model')}
+              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                recognitionMode === 'model'
+                  ? 'bg-[#0D9488] text-white shadow-xs'
+                  : 'text-[#475569] hover:text-[#0F172A]'
+              }`}
             >
-              <span>Model Mode</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-bold">
-                Coming soon
-              </span>
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Live Model Mode {recognitionMode === 'model' ? '(Active)' : ''}</span>
             </button>
           </div>
         </div>
@@ -193,7 +210,7 @@ export const LiveRecognitionPage: React.FC = () => {
                 playsInline
                 muted
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                  isCameraActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  isCameraActive ? 'opacity-100 scale-x-[-1]' : 'opacity-0 pointer-events-none'
                 }`}
               />
 
@@ -204,7 +221,9 @@ export const LiveRecognitionPage: React.FC = () => {
                   </div>
                   <h3 className="text-lg font-bold text-slate-100 mb-1">Webcam Stream Preview</h3>
                   <p className="text-xs text-slate-400 max-w-sm mb-6">
-                    Click "Start Camera" above to activate your video stream or use the compact letter selector below.
+                    {recognitionMode === 'model'
+                      ? 'Click "Start Camera" to activate your video stream for real-time MediaPipe hand tracking & ISL prediction.'
+                      : 'Click "Start Camera" above to activate your video stream or use the compact letter selector below.'}
                   </p>
                   <button
                     onClick={startCamera}
@@ -222,9 +241,30 @@ export const LiveRecognitionPage: React.FC = () => {
                     <div className="w-4 h-4 border-t-2 border-r-2 border-[#0D9488]"></div>
                   </div>
 
-                  <div className="self-center bg-[#0F172A]/90 backdrop-blur border border-[#0D9488]/40 text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#0D9488] animate-ping"></span>
-                    <span>Tracking Hand Landmarks</span>
+                  <div className="self-center bg-[#0F172A]/90 backdrop-blur border border-[#0D9488]/40 text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg">
+                    {isModelLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0D9488]" />
+                        <span>Initializing AI Vision Engine...</span>
+                      </>
+                    ) : recognitionMode === 'model' ? (
+                      isHandDetected ? (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-[#0D9488] animate-ping"></span>
+                          <span className="text-emerald-400">Live Hand Tracking Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                          <span className="text-amber-300">Position Hand in Frame</span>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-[#0D9488] animate-ping"></span>
+                        <span>Tracking Hand Landmarks (Demo)</span>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex justify-between">
@@ -234,38 +274,53 @@ export const LiveRecognitionPage: React.FC = () => {
                 </div>
               )}
 
-              {cameraError && (
+              {(cameraError || modelError) && (
                 <div className="absolute bottom-4 left-4 right-4 bg-amber-900/90 text-amber-200 px-3 py-2 rounded-lg text-xs border border-amber-700 z-30">
-                  {cameraError}
+                  {cameraError || modelError}
                 </div>
               )}
 
             </div>
 
-            {/* Compact A–Z Letter Selector */}
+            {/* Compact A–Z Letter Selector / Model Status Footer */}
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E6E1DA]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">
-                  Compact A–Z Letter Selector (Demo Mode)
-                </span>
-                <span className="text-[11px] text-[#0D9488] font-bold">Click to trigger gesture</span>
-              </div>
+              {recognitionMode === 'demo' ? (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">
+                      Compact A–Z Letter Selector (Demo Mode)
+                    </span>
+                    <span className="text-[11px] text-[#0D9488] font-bold">Click to trigger gesture</span>
+                  </div>
 
-              <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-1.5">
-                {ISL_ALPHABET.map((item) => (
-                  <button
-                    key={item.letter}
-                    onClick={() => selectDemoLetter(item.letter)}
-                    className={`h-9 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
-                      currentLetter === item.letter
-                        ? 'bg-[#0F172A] text-white ring-2 ring-[#0D9488] shadow-xs'
-                        : 'bg-white text-[#334155] border border-[#E6E1DA] hover:border-[#0D9488]'
-                    }`}
-                  >
-                    {item.letter}
-                  </button>
-                ))}
-              </div>
+                  <div className="grid grid-cols-7 sm:grid-cols-9 md:grid-cols-13 gap-1.5">
+                    {ISL_ALPHABET.map((item) => (
+                      <button
+                        key={item.letter}
+                        onClick={() => selectDemoLetter(item.letter)}
+                        className={`h-9 rounded-lg font-extrabold text-xs transition-all cursor-pointer ${
+                          currentLetter === item.letter
+                            ? 'bg-[#0F172A] text-white ring-2 ring-[#0D9488] shadow-xs'
+                            : 'bg-white text-[#334155] border border-[#E6E1DA] hover:border-[#0D9488]'
+                        }`}
+                      >
+                        {item.letter}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-[#475569] gap-2 py-1">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-[#0D9488]" />
+                    <span className="font-semibold text-[#0F172A]">Real-Time ML Pipeline Active:</span>
+                    <span>Camera → MediaPipe 21 Joints → Normalized 63D → TensorFlow.js</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#0D9488] font-bold">
+                    {isHandDetected ? 'Hand Locked' : 'Searching for Hand...'}
+                  </span>
+                </div>
+              )}
             </div>
 
           </div>
@@ -279,8 +334,12 @@ export const LiveRecognitionPage: React.FC = () => {
                   CURRENT LETTER
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FAF8F5] text-[#64748B] border border-[#E6E1DA]">
-                    Demo Mode
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    recognitionMode === 'model'
+                      ? 'bg-[#0D9488]/10 text-[#0F766E] border-[#0D9488]/30'
+                      : 'bg-[#FAF8F5] text-[#64748B] border-[#E6E1DA]'
+                  }`}>
+                    {recognitionMode === 'model' ? 'Live Model' : 'Demo Mode'}
                   </span>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${
                     stabilityStatus === 'Stable'
@@ -328,9 +387,11 @@ export const LiveRecognitionPage: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-[#E6E1DA] text-xs text-[#64748B] flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-[#0D9488]" />
-                <span>Engine: Modular ISLPredictor</span>
+                <span>Engine: {recognitionMode === 'model' ? 'TensorFlow.js MLP' : 'Modular ISLPredictor'}</span>
               </div>
-              <span className="font-mono text-[11px] text-[#0D9488]">DemoPredictor</span>
+              <span className="font-mono text-[11px] text-[#0D9488]">
+                {recognitionMode === 'model' ? 'best_mlp_improved.keras' : 'DemoPredictor'}
+              </span>
             </div>
 
           </div>
@@ -366,7 +427,7 @@ export const LiveRecognitionPage: React.FC = () => {
           {/* Recognized Text Screen */}
           <div className="min-h-[90px] p-5 bg-[#FAF8F5] border border-[#E6E1DA] rounded-xl flex items-center justify-between mb-4">
             <span className="text-3xl font-extrabold tracking-widest text-[#0F172A] break-all font-mono">
-              {messageBuffer || <span className="text-[#94A3B8] font-normal italic text-base">Select A–Z signs to spell text (e.g. H → E → L → L → O)...</span>}
+              {messageBuffer || <span className="text-[#94A3B8] font-normal italic text-base">Perform ISL alphabet signs in front of the camera to spell text...</span>}
             </span>
             {messageBuffer && (
               <span className="w-2.5 h-6 bg-[#0D9488] animate-pulse ml-2 shrink-0"></span>
@@ -381,7 +442,7 @@ export const LiveRecognitionPage: React.FC = () => {
             </div>
           )}
 
-          {/* Controls: Space, Backspace, Clear, Speak */}
+          {/* Controls: Space, Backspace, Clear, Speak, Auto-TTS Toggle */}
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleSpeak}
@@ -402,14 +463,27 @@ export const LiveRecognitionPage: React.FC = () => {
               ) : messageBuffer.trim() ? (
                 <>
                   <Volume2 className="w-4 h-4 text-[#0D9488]" />
-                  <span>Speak</span>
+                  <span>Speak Buffer</span>
                 </>
               ) : (
                 <>
                   <VolumeX className="w-4 h-4 text-slate-400" />
-                  <span>Speak</span>
+                  <span>Speak Buffer</span>
                 </>
               )}
+            </button>
+
+            <button
+              onClick={() => setAutoSpeakLetter(prev => !prev)}
+              className={`py-3 px-4 rounded-xl font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5 border ${
+                autoSpeakLetter
+                  ? 'bg-[#0D9488]/10 text-[#0F766E] border-[#0D9488]/30'
+                  : 'bg-white text-slate-400 border-[#E6E1DA]'
+              }`}
+              title="Toggle automatic speech pronunciation for newly recognized stable letters"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${autoSpeakLetter ? 'text-[#0D9488]' : 'text-slate-400'}`} />
+              <span>Auto-Speak Signs: {autoSpeakLetter ? 'ON' : 'OFF'}</span>
             </button>
 
             <button
