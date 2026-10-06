@@ -1,32 +1,75 @@
-# React + TypeScript + Vite
+# ISL CONNECT — Real-Time Indian Sign Language Recognition
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+ISL CONNECT brings accessible, real-time Indian Sign Language (ISL) alphabet recognition (A–Z) directly to modern web browsers through client-side computer vision and deep learning.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 1. Machine Learning & Vision Architecture
 
-## React Compiler
+- **Model Artifacts Location**: `public/models/isl/` (`model.json`, `group1-shard1of1.bin`, `class_names.json`).
+- **Trained Model**: `best_mlp_improved.keras` converted and exported to TensorFlow.js (`63 → 256 → 128 → 26`).
+- **Input Dimension**: 21 3D hand keypoints $(x, y, z) = 63$ normalized floating-point features.
+- **Preprocessing Pipeline**: Wrist-centric translation (Landmark 0 is origin $[0,0,0]$) + Scale normalization (maximum Euclidean radius scaling).
+- **Output Dimension**: 26 classes representing ISL alphabet characters `A` through `Z` (Index `0` = `'A'` ... Index `25` = `'Z'`).
+- **Hand Detection**: `@mediapipe/tasks-vision` single-hand Landmarker in `VIDEO` continuous tracking mode.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## 2. In-Browser Real-Time Inference Pipeline
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+Webcam Frame (720p @ 30 FPS)
+  │
+  ▼
+MediaPipe Tasks Vision Hand Landmarker (Single Hand)
+  │
+  ├─► No Hand ──► Clears temporal history (zero TF inference executed)
+  │
+  ▼
+21 Raw Keypoints (x, y, z)
+  │
+  ▼
+preprocessLandmarks() (Wrist Translation + Max Radius Normalization)
+  │
+  ▼
+63-Feature Float32Array
+  │
+  ▼
+ISLClassifierService (TensorFlow.js Layers Model)
+  │
+  ▼
+Softmax Confidence Gate (Confidence Threshold >= 0.75)
+  │
+  ▼
+Temporal Consensus Smoothing (5-Frame Window, >= 3 Agreement)
+  │
+  ▼
+Stable Recognized Sign ──► Live Text Buffer ──► SpeechSynthesis TTS Output
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 3. Core Features
+
+- **Live Recognition (`/live`)**: Real-time sign spelling with auto-accumulating sentence buffer, backspace/space/clear controls, and browser Text-to-Speech audio output.
+- **Practice Mode (`/practice`)**: Interactive gesture training testing individual target letters against live webcam feed with single-scoring locks, streak tracking, and accuracy metrics.
+- **Learn ISL (`/learn`)**: 26-letter sign dictionary with posture guidance and interactive quizzes.
+- **Demo Mode**: Built-in interactive simulator allowing full application testing without webcam access.
+
+---
+
+## 4. Development & Build
+
+```bash
+# Install dependencies
+npm install
+
+# Start local Vite development server
+npm run dev
+
+# Run TypeScript check & production build
+npm run build
+
+# Run linter
+npm run lint
+```
